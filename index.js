@@ -19,6 +19,7 @@ async function done() {
   console.log("Fetching data...");
   await discServer.channels.fetch().catch(console.error);
   await discServer.emojis.fetch().catch(console.error);
+  await revServer.fetchMembers();
   console.log("Fetched data.");
 
   function discFindChannel(id) {
@@ -28,7 +29,7 @@ async function done() {
   function discordEmbed(message) {
     let embed = new Discord.MessageEmbed();
     embed.setAuthor(message.author.username, message.author.generateAvatarURL());
-    if (message.content) embed.setDescription(message.content);
+    if (message.content) embed.setDescription(parseRevoltMentions(message.content));
     let file = message.attachments
       ?.filter((a) => a.content_type.startsWith("image"))
       .map((a) => `https://autumn.revolt.chat/attachments/${a._id}/${a.filename}`);
@@ -36,6 +37,34 @@ async function done() {
     embed.setTimestamp();
     embed.setFooter(message._id);
     return embed;
+  }
+  function parseRevoltMentions(content) {
+    let newContent = "";
+    content.split("<").forEach((c) => {
+      c.split(">").forEach((cc) => {
+        if (!cc) return;
+        if (cc.length !== 27 || (!cc.startsWith("@") && !cc.startsWith("#"))) {
+          newContent += cc; // needs better imp
+        } else {
+          let modifier = [...cc][0];
+          let id = cc.substring(1);
+          switch (modifier) {
+            case "@":
+              let user = rev.users.get(id) || {};
+              newContent += `@${user.username || "unknownuser"}`;
+              break;
+            case "#":
+              let channel = revServer.channels.get(id) || {};
+              newContent += `#${channel.name || "unknown-channel"}`;
+              break;
+            default:
+              newContent += cc;
+              break;
+          }
+        }
+      });
+    });
+    return newContent;
   }
   function revoltTimestamp() {
     // format timestamp for revolt
@@ -143,6 +172,11 @@ ${files.join(", ")}`
         )
         .catch(console.error);
       await message.react("📩").catch(console.error);
+    });
+
+    let syncOn = ["ChannelCreate", "ServerUpdate", "ChannelDelete"];
+    rev.on("packet", (p) => {
+      if (syncOn.includes(p.type)) sync();
     });
   });
 }

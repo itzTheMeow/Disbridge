@@ -53,7 +53,7 @@ The discord server is NOT meant to be edited, as this could crash the bot as it 
   - would need to figure out how [vortex](https://github.com/revoltchat/vortex) works and attempt to connect
 - auto sync channels
 - MAYBE ill figure out the upload shit for autumn and make images an attachment instead of link
-- some sort of mention parsing
-  - i think revolt usernames are unique so something like @meow would work for discord => revolt
+- mention parsing for discord
+- send/delete any user mentions after embed is sent to actually ping
 - mentions command
   - lists people you can mention
