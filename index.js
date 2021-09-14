@@ -2,7 +2,9 @@ const Discord = require("discord.js");
 const Revolt = require("revolt.js");
 const config = require("./config.json");
 
-const disc = new Discord.Client({ intents: Object.values(Discord.Intents.FLAGS) });
+const disc = new Discord.Client({
+  intents: Object.values(Discord.Intents.FLAGS), // fuck you discord lmao
+});
 disc.login(config.token.discord);
 
 const rev = new Revolt.Client();
@@ -20,12 +22,23 @@ async function done() {
   console.log("Fetched data.");
 
   function discFindChannel(id) {
+    // finds a discord channel given a revolt id
     return discServer.channels.cache.filter((c) => c.isText()).find((c) => c.topic === id);
   }
-  function discordTimestamp() {
-    return `<t:${Math.floor(+new Date() / 1000)}:R>`;
+  function discordEmbed(message) {
+    let embed = new Discord.MessageEmbed();
+    embed.setAuthor(message.author.username, message.author.generateAvatarURL());
+    if (message.content) embed.setDescription(message.content);
+    let file = message.attachments
+      ?.filter((a) => a.content_type.startsWith("image"))
+      .map((a) => `https://autumn.revolt.chat/attachments/${a._id}/${a.filename}`);
+    if (file && file.length) embed.setImage(file[0]);
+    embed.setTimestamp();
+    embed.setFooter(message._id);
+    return embed;
   }
   function revoltTimestamp() {
+    // format timestamp for revolt
     return new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -33,13 +46,6 @@ async function done() {
       hour: "numeric",
       minute: "numeric",
     });
-  }
-  async function discordAvatar(user) {
-    let emoji = discServer.emojis.cache.find((e) => e.name == user._id);
-    if (!emoji) {
-      emoji = await discServer.emojis.create(user.generateAvatarURL(), user._id);
-    }
-    return emoji.toString();
   }
 
   function sync() {
@@ -103,19 +109,8 @@ async function done() {
         sync();
         return;
       }
-      let files = [];
-      message.attachments
-        ?.filter((a) => a.content_type.startsWith("image"))
-        .forEach((a) => {
-          files.push(`https://autumn.revolt.chat/attachments/${a._id}/${a.filename}`);
-        });
       chan.send({
-        content: `${await discordAvatar(message.author)} **${
-          message.author.username
-        }** ${discordTimestamp()}
-
-${message.content ? `>>> ${message.content}` : ""}`,
-        files: files,
+        embeds: [discordEmbed(message)],
       });
     });
     disc.on("messageCreate", async (message) => {
@@ -132,14 +127,12 @@ ${message.content ? `>>> ${message.content}` : ""}`,
         return;
       }
       let files = message.attachments.map((a) => a.proxyURL);
-      chan.sendMessage({
-        ...{
-          content: `**${message.author.tag}** [${revoltTimestamp()}]
+
+      await chan.sendMessage(`**${message.author.tag}** [${revoltTimestamp()}]
 
 > ${message.content}
-${files.join(", ")}`,
-        },
-      });
+${files.join(", ")}`);
+      await message.react("📩").catch(console.error);
     });
   });
 }
