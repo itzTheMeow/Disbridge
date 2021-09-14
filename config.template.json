@@ -1,0 +1,10 @@
+{
+  "token": {
+    "discord": "<discord bot token>",
+    "revolt": "<revolt bot token>"
+  },
+  "server": {
+    "discord": "<discord server id>",
+    "revolt": "<revolt server id>"
+  }
+}
