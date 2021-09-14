@@ -17,8 +17,8 @@ async function done() {
   let revServer = await rev.servers.fetch(config.server.revolt);
   if (!discServer || !revServer) return console.log("Error fetching servers.");
   console.log("Fetching data...");
-  await discServer.channels.fetch();
-  await discServer.emojis.fetch();
+  await discServer.channels.fetch().catch(console.error);
+  await discServer.emojis.fetch().catch(console.error);
   console.log("Fetched data.");
 
   function discFindChannel(id) {
@@ -58,7 +58,9 @@ async function done() {
           let channel = discFindChannel(c._id);
           if (!channel) {
             console.log(`Did not find channel ${c.name} in discord, creating it..."`);
-            await discServer.channels.create(c.name, { type: "GUILD_TEXT", topic: c._id });
+            await discServer.channels
+              .create(c.name, { type: "GUILD_TEXT", topic: c._id })
+              .catch(console.error);
           }
           done++;
           if (revChan.length == done) {
@@ -73,7 +75,7 @@ async function done() {
           let through = 0;
           chan.forEach(async (c) => {
             if (!c.topic || !revChan.map((c) => c._id).includes(c.topic)) {
-              await c.delete();
+              await c.delete().catch(console.error);
             }
             through++;
             if (through == chan.size) {
@@ -84,8 +86,10 @@ async function done() {
         }).then(() => {
           console.log("Sycing server data...");
           new Promise(async (res) => {
-            if (discServer.name !== revServer.name) await discServer.setName(revServer.name);
-            if (!discServer.icon) await discServer.setIcon(revServer.generateIconURL()); // needs better detection
+            if (discServer.name !== revServer.name)
+              await discServer.setName(revServer.name).catch(console.error);
+            if (!discServer.icon)
+              await discServer.setIcon(revServer.generateIconURL()).catch(console.error); // needs better detection
             console.log("Synced server data.");
             _res();
           });
@@ -109,9 +113,11 @@ async function done() {
         sync();
         return;
       }
-      chan.send({
-        embeds: [discordEmbed(message)],
-      });
+      chan
+        .send({
+          embeds: [discordEmbed(message)],
+        })
+        .catch(console.error);
     });
     disc.on("messageCreate", async (message) => {
       if (
@@ -128,10 +134,14 @@ async function done() {
       }
       let files = message.attachments.map((a) => a.proxyURL);
 
-      await chan.sendMessage(`**${message.author.tag}** [${revoltTimestamp()}]
+      await chan
+        .sendMessage(
+          `**${message.author.tag}** [${revoltTimestamp()}]
 
 > ${message.content}
-${files.join(", ")}`);
+${files.join(", ")}`
+        )
+        .catch(console.error);
       await message.react("📩").catch(console.error);
     });
   });
